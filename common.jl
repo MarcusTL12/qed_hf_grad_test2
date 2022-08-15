@@ -135,3 +135,22 @@ function write_xyz(filename, atoms, r)
         end
     end
 end
+
+function read_xyz(filename)
+    open(filename) do io
+        lines = Base.Stateful(eachline(io))
+        n_atm = parse(Int, popfirst!(lines))
+        popfirst!(lines)
+
+        atoms = String[]
+        r = Float64[]
+
+        for l in lines
+            s = split(l)
+            push!(atoms, s[1])
+            append!(r, (parse(Float64, x) for x in @view s[2:4]))
+        end
+
+        atoms, reshape(r, 3, n_atm)
+    end
+end

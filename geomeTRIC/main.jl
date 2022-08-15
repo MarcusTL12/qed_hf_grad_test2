@@ -138,3 +138,26 @@ function test_thalidomide()
 
     m
 end
+
+function resume_thalidomide()
+    atoms, r = read_xyz("geometries/thalidomide_0.2.xyz")
+    r = r'
+    basis = "cc-pvdz"
+
+    freq = 0.5
+    pol = [0, 1, 0]
+    pol = pol / norm(pol)
+    coup = 0.22
+
+    rf = make_runner_func("grad.2", freq, pol, coup, atoms, basis, 80)
+
+    egf = make_e_and_grad_func(rf)
+
+    qed_hf_engine = engine.qed_hf_engine(egf, atoms, r)
+
+    m = engine.run_opt(qed_hf_engine)
+
+    write_xyz("geometries/thalidomide_$coup.xyz", atoms, m.xyzs[end]')
+
+    m
+end
