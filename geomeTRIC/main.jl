@@ -140,14 +140,16 @@ function test_thalidomide()
 end
 
 function resume_thalidomide()
-    atoms, r = read_xyz("geometries/thalidomide_0.2.xyz")
+    coup_from = "free"
+
+    atoms, r = read_xyz("geometries/thalidomide_$coup_from.xyz")
     r = r'
     basis = "cc-pvdz"
 
     freq = 0.5
     pol = [0, 1, 0]
     pol = pol / norm(pol)
-    coup = 0.22
+    coup = 0.05
 
     rf = make_runner_func("grad.2", freq, pol, coup, atoms, basis, 80)
 
@@ -157,7 +159,14 @@ function resume_thalidomide()
 
     m = engine.run_opt(qed_hf_engine)
 
-    write_xyz("geometries/thalidomide_$coup.xyz", atoms, m.xyzs[end]')
+    filename = "geometries/thalidomide_$(coup_from)_to_$(coup).xyz"
+    touch(filename)
 
-    m
+    # write_xyz("geometries/thalidomide_$coup.xyz", atoms, m.xyzs[end]')
+
+    for xyz in m.xyzs
+        write_xyz(filename, atoms, xyz', "a")
+    end
+
+    m.xyzs[end]
 end

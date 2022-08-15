@@ -127,8 +127,8 @@ function split_atoms(atoms)
     [m.match for m in eachmatch(atom_reg, atoms)]
 end
 
-function write_xyz(filename, atoms, r)
-    open(filename, "w") do io
+function write_xyz(filename, atoms, r, mode="w")
+    open(filename, mode) do io
         println(io, length(atoms), '\n')
         for (i, a) in enumerate(atoms)
             println(io, "$a    $(r[1, i]) $(r[2, i]) $(r[3, i])")
