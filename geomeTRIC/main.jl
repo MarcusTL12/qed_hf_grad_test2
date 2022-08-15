@@ -140,7 +140,7 @@ function test_thalidomide()
 end
 
 function resume_thalidomide()
-    coup_from = 0.05
+    coup_from = 0.15
 
     atoms, r = read_xyz("geometries/thalidomide_$coup_from.xyz")
     r = r'
@@ -149,7 +149,7 @@ function resume_thalidomide()
     freq = 0.5
     pol = [0, 1, 0]
     pol = pol / norm(pol)
-    coup = 0.1
+    coup = 0.2
 
     rf = make_runner_func("grad.2", freq, pol, coup, atoms, basis, 80)
 
@@ -162,7 +162,7 @@ function resume_thalidomide()
     filename = "geometries/thalidomide_$(coup_from)_to_$(coup).xyz"
     touch(filename)
 
-    # write_xyz("geometries/thalidomide_$coup.xyz", atoms, m.xyzs[end]')
+    write_xyz("geometries/thalidomide_$coup.xyz", atoms, m.xyzs[end]')
 
     for xyz in m.xyzs
         write_xyz(filename, atoms, xyz', "a")
