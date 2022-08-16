@@ -70,10 +70,10 @@ function test_h2o()
         0 0 0
         1 0 0
         0 1 0
-    ]
+    ] .+ rand(3, 3) * 0.01
 
     freq = 0.5
-    pol = [0.1, 1, 0.1]
+    pol = [0, 1, 0]
     pol = pol / norm(pol)
     coup = 0.05
 

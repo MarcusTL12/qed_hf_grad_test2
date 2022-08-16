@@ -67,6 +67,14 @@ function write_inp(inp, name)
     end
 end
 
+function run_inp(name, omp, eT)
+    if isnothing(omp)
+        omp = parse(Int, read("omp.txt", String))
+    end
+    run(`$(homedir())/$(eT)/build/eT_launch.py $(name).inp --omp $(omp) --scratch ./scratch/$(name) -ks`)
+    nothing
+end
+
 function run_inp(name, omp)
     if isnothing(omp)
         omp = parse(Int, read("omp.txt", String))
@@ -81,13 +89,14 @@ function delete_scratch(name)
     end
 end
 
-function make_runner_func(name, freq, pol, coup, atoms, basis, omp)
+function make_runner_func(name, freq, pol, coup, atoms, basis, omp;
+    eT="eT_qed_hf_grad_print")
     delete_scratch(name)
     inp_func = make_inp_func(freq, pol, coup, atoms, basis)
     function runner_func(r)
         inp = inp_func(r)
         write_inp(inp, name)
-        run_inp(name, omp)
+        run_inp(name, omp, eT)
     end
 end
 

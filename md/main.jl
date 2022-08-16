@@ -4,6 +4,7 @@ using Plots
 using DSP
 using Statistics
 using KernelDensity
+using QuadGK
 
 include("../common.jl")
 
@@ -572,12 +573,27 @@ function plot_dist!(data; label="")
     plot!(xs, x -> pdf(U, x); label=label)
 end
 
-function plot_rad_dist!(data; label="")
-    xs = range(extrema(data)...; length=1000)
+function plot_rad_dist!(data; label="", nrm=false, end_override=nothing)
+    x_begin, x_end = extrema(data)
+
+    if !isnothing(end_override)
+        x_end = end_override
+    end
+
+    xs = range(x_begin, x_end; length=1000)
 
     U = kde(data)
 
-    plot!(xs, x -> pdf(U, x) / x; label=label)
+    f = x -> pdf(U, x) / x
+
+    g = if nrm
+        integral = quadgk(f, x_begin, x_end)[1]
+        x -> f(x) / integral
+    else
+        f
+    end
+
+    plot!(xs, g; label=label)
 end
 
 function calculate_std_dev_mass(r, atoms)
