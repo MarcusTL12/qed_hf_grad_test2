@@ -140,7 +140,7 @@ function test_thalidomide()
 end
 
 function resume_thalidomide()
-    coup_from = 0.22
+    coup_from = 0.25
 
     atoms, r = read_xyz("geometries/thalidomide_$coup_from.xyz")
     r = r'
@@ -149,7 +149,7 @@ function resume_thalidomide()
     freq = 0.5
     pol = [0, 1, 0]
     pol = pol / norm(pol)
-    coup = 0.23
+    coup = 0.26
 
     rf = make_runner_func("grad.2", freq, pol, coup, atoms, basis, 80)
 
