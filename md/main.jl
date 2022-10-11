@@ -5,10 +5,14 @@ using DSP
 using Statistics
 using KernelDensity
 using QuadGK
+using Plots.PlotMeasures
 
 include("../common.jl")
 
 ############## MD ############
+
+const au2s = 2.418884326585747e-17
+const au2ps = au2s * 1e12
 
 const mp = 1836
 
@@ -226,6 +230,26 @@ function keep_temp(filename, target_temp, sim_steps, avg_steps)
 end
 
 ############ ANALYSIS ########
+
+function get_t(filename)
+    ts = Float64[]
+    n_atm = 0
+    open(filename) do io
+        lines = Iterators.Stateful(eachline(io))
+
+        while !isempty(lines)
+            n_atm = parse(Int, popfirst!(lines))
+            l = popfirst!(lines)
+            ls = split(l, "; ")
+            push!(ts, parse(Float64, split(ls[2], " = ")[2]))
+
+            for _ in 1:n_atm
+                popfirst!(lines)
+            end
+        end
+    end
+    ts
+end
 
 function get_tVK(filename)
     ts = Float64[]
@@ -605,7 +629,36 @@ function calculate_std_dev_mass(r, atoms)
         dev += atom_mass[atm] * (rc - com) .^ 2
     end
 
+    dev /= sum(atom_mass[atom] for atom in atoms)
+
     sqrt.(dev)
+end
+
+function get_last_n_std_dev_mass(filename, n, spacing=1)
+    r, _, atoms = get_rv(filename)
+
+    devs = Float64[]
+
+    rng = 1:size(r, 3)
+    rng = rng[end-(spacing*n-1):spacing:end]
+
+    for i in rng
+        append!(devs, calculate_std_dev_mass((@view r[:, :, i]), atoms))
+    end
+
+    reshape(devs, 3, length(devs) ÷ 3)
+end
+
+function get_std_dev_mass(filename)
+    r, _, atoms = get_rv(filename)
+
+    devs = Float64[]
+
+    for i in axes(r, 3)
+        append!(devs, calculate_std_dev_mass((@view r[:, :, i]), atoms))
+    end
+
+    reshape(devs, 3, length(devs) ÷ 3)
 end
 
 function calculate_dev_from_pol_h2o(r, pol)
@@ -678,6 +731,120 @@ function plot_µ_hist(filename)
     plot(@view µs[1, :]; label="x")
     plot!(@view µs[2, :]; label="y")
     plot!(@view µs[3, :]; label="z")
+end
+
+############ NICE PRESENTABLE PLOTS ##################
+
+function make_rad_dist_func(data, x_begin, x_end)
+    U = kde(data)
+
+    f = x -> pdf(U, x) / x
+
+    integral = quadgk(f, x_begin, x_end)[1]
+
+    x -> f(x) / integral
+end
+
+function plot_rad_dist_h2o()
+    plot(; layout=(3, 1), size=(500, 500))
+    spacing = 1
+    n = 4000 ÷ spacing
+    x_begin = 0.5
+    x_end = 6
+    xs = range(x_begin, x_end; length=1000)
+
+    plot_nr = 1
+
+    function add_plot!(a1, a2)
+        data_c = get_last_n_radial_dist("md/many_h2o/30h2o_0.1.xyz", a1, a2, n, spacing)
+        data_f = get_last_n_radial_dist("md/many_h2o/30h2o_free.xyz", a1, a2, n, spacing)
+
+        f_c = make_rad_dist_func(data_c, x_begin, x_end)
+        f_f = make_rad_dist_func(data_f, x_begin, x_end)
+
+        plot!(xs, f_c; subplot=plot_nr, label="0.1", ylabel="$a1-$a2")
+        plot!(xs, f_f; subplot=plot_nr, label="0.0")
+
+        plot_nr += 1
+
+        plot!()
+    end
+
+    add_plot!("H", "H")
+    add_plot!("O", "H")
+    add_plot!("O", "O")
+end
+
+function plot_plan_dev()
+    plot(; size=(500, 500), leg=:topleft)
+    spacing = 1
+    n = 4000 ÷ spacing
+    plot_dist!(get_last_n_dev_from_pol("md/many_h2o/30h2o_0.1.xyz", [0, 1, 0], n, spacing); label="0.1")
+    plot_dist!(get_last_n_dev_from_pol("md/many_h2o/30h2o_free.xyz", [0, 1, 0], n, spacing); label="0.0")
+end
+
+function plot_mass_dev()
+    plot(; layout=(3, 1), size=(500, 500), leg=:topleft)
+
+    spacing = 1
+    n = 4000 ÷ spacing
+
+    data_c = get_last_n_std_dev_mass("md/many_h2o/30h2o_0.1.xyz", n, spacing)
+    data_f = get_last_n_std_dev_mass("md/many_h2o/30h2o_free.xyz", n, spacing)
+
+    xs = range(1000, 4000; length=1000)
+
+    function add_plot!(ax)
+        data_c_ax = @view data_c[ax,:]
+        data_f_ax = @view data_f[ax,:]
+
+        U_c = kde(data_c_ax)
+        U_f = kde(data_f_ax)
+
+        f_c = x -> pdf(U_c, x)
+        f_f = x -> pdf(U_f, x)
+
+        plot!(xs, f_c; label="0.1", subplot=ax, ylabel=string("xyz"[ax]))
+        plot!(xs, f_f; label="0.0", subplot=ax)
+    end
+
+    add_plot!(1)
+    add_plot!(2)
+    add_plot!(3)
+end
+
+function plot_mass_dev_history()
+    plot(; layout=(3, 1), link=:x, size=(1000, 600), leg=:topright,
+        left_margin=50px, bottom_margin=30px)
+    plot!(; subplot=3, xlabel="t [ps]")
+
+    data_c = get_std_dev_mass("md/many_h2o/30h2o_0.1.xyz")
+    t_c = get_t("md/many_h2o/30h2o_0.1.xyz") * au2ps
+    data_f = get_std_dev_mass("md/many_h2o/30h2o_free.xyz")
+    t_f = get_t("md/many_h2o/30h2o_free.xyz") * au2ps
+
+    rgb = (:red, :green, :blue)
+
+    labels = [
+        ("0.1", "0.0"),
+        (nothing, nothing),
+        (nothing, nothing)
+    ]
+
+    yl = [0.0, 4.0]
+
+    function add_plot!(ax)
+        data_c_ax = @view data_c[ax,:]
+        data_f_ax = @view data_f[ax,:]
+
+        plot!(t_c, data_c_ax; label=labels[ax][1], subplot=ax, ylabel=string("xyz"[ax]),
+            yguidefont=font(rgb[ax], :bold, rotation=-90.0, pointsize=20), ylims=yl)
+        plot!(t_f, data_f_ax; label=labels[ax][2], subplot=ax)
+    end
+
+    add_plot!(1)
+    add_plot!(2)
+    add_plot!(3)
 end
 
 ############ TESTS ###########

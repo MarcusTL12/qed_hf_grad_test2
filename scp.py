@@ -11,13 +11,15 @@ username = "marcusl"
 
 remote_prefix = f"/home/{username}/qed_hf_grad_test2/"
 
-remote_path = f"{username}@{cluster_name}.nt.ntnu.no:{remote_prefix}{os.path.dirname(filepath)}"
-
 command = "scp"
 
+dirname = os.path.dirname(filepath)
+
 if action == 'f':
-    command = ' '.join([command, remote_path, filepath])
+    remote_path = f"{username}@{cluster_name}.nt.ntnu.no:{remote_prefix}{filepath}"
+    command = ' '.join([command, remote_path, dirname])
 elif action == 'p':
+    remote_path = f"{username}@{cluster_name}.nt.ntnu.no:{remote_prefix}{dirname}"
     command = ' '.join([command, filepath, remote_path])
 
 print(command)
