@@ -4,6 +4,8 @@ include("get_dipole.jl")
 const Å2B = 1.8897261245650618
 const kB = 3.166811563e-6
 
+const eT_inout_dir = "eT_files"
+
 function make_inp_func(freq, pol, coup, atoms, basis)
     function make_inp(r)
         r /= Å2B
@@ -62,7 +64,7 @@ basis: $basis
 end
 
 function write_inp(inp, name)
-    open("$name.inp", "w") do io
+    open("$(eT_inout_dir)/$(name).inp", "w") do io
         print(io, inp)
     end
 end
@@ -71,15 +73,7 @@ function run_inp(name, omp, eT)
     if isnothing(omp)
         omp = parse(Int, read("omp.txt", String))
     end
-    run(`$(homedir())/$(eT)/build/eT_launch.py $(name).inp --omp $(omp) --scratch ./scratch/$(name) -ks`)
-    nothing
-end
-
-function run_inp(name, omp)
-    if isnothing(omp)
-        omp = parse(Int, read("omp.txt", String))
-    end
-    run(`$(homedir())/eT_qed_hf_grad_print/build/eT_launch.py $(name).inp --omp $(omp) --scratch ./scratch/$(name) -ks`)
+    run(`$(homedir())/$(eT)/build/eT_launch.py $(eT_inout_dir)/$(name).inp --omp $(omp) --scratch ./scratch/$(name) -ks`)
     nothing
 end
 
@@ -103,7 +97,7 @@ end
 const tot_energy_reg = r"Total energy:\ +(-?\d+\.\d+)"
 
 function get_tot_energy(name)
-    m = match(tot_energy_reg, read("$name.out", String))
+    m = match(tot_energy_reg, read("$(eT_inout_dir)/$(name).out", String))
     parse(Float64, m.captures[1])
 end
 
@@ -117,7 +111,7 @@ end
 function make_grad_func(runner_func)
     function grad_function(r)
         runner_func(r)
-        get_matrix("QEDHF Molecular Gradient", runner_func.name)
+        get_matrix("QEDHF Molecular Gradient", "$(eT_inout_dir)/$(runner_func.name)")
     end
 end
 
@@ -126,7 +120,7 @@ function make_e_and_grad_func(runner_func)
         runner_func(r)
 
         get_tot_energy(runner_func.name),
-        get_matrix("QEDHF Molecular Gradient", runner_func.name)
+        get_matrix("QEDHF Molecular Gradient", "$(eT_inout_dir)/$(runner_func.name)")
     end
 end
 

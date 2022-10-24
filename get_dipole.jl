@@ -2,7 +2,7 @@
 const dip_reg = r"Dipole moment in \[Debye\].+?-+\n(.+?) +-{2}"s
 
 function get_dipole(name)
-    m = match(dip_reg, read("$name.out", String))
+    m = match(dip_reg, read("eT_files/$name.out", String))
     parse.(Float64, split(m.captures[1])[4:4:end])
 end
 

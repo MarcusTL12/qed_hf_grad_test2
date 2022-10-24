@@ -9,30 +9,32 @@ engine = pyimport("engine")
 include("../common.jl")
 
 
-function test_engine()
+function test_2h2o()
     atoms = split_atoms("OHHOHH")
     basis = "cc-pvdz"
     r = Float64[
-        0.00074 -0.00014 0.00003
-        0.03041 0.10161 0.97727
-        -0.27764 -0.92380 -0.08655
-        -0.00484 0.00131 2.75024
-        0.78062 -0.00539 3.32392
-        -0.68819 0.38765 3.32456
-    ]' |> copy
+        0.224814 0.265419 -0.0118646
+        0.118539 0.0837589 0.914633
+        -0.605434 0.0282651 -0.397106
+        -0.0365481 -0.370659 2.89984
+        0.796774 -0.398863 3.34876
+        -0.65382 -0.0447871 3.53878
+    ] .+ rand(6, 3) .* 0.001
 
     freq = 0.5
-    pol = [0.1, 1, 0.1]
+    pol = [0, 1, 0]
     pol = pol / norm(pol)
-    coup = 0.1
+    coup = 0.0
 
-    rf = make_runner_func("grad", freq, pol, coup, atoms, basis, 8)
+    rf = make_runner_func("grad", freq, pol, coup, atoms, basis, 80)
 
     egf = make_e_and_grad_func(rf)
 
     qed_hf_engine = engine.qed_hf_engine(egf, atoms, r)
 
-    qed_hf_engine.calc_new(r, nothing)
+    m = engine.run_opt(qed_hf_engine)
+
+    m.xyzs[end]
 end
 
 function test_engine2()
@@ -167,6 +169,32 @@ function resume_thalidomide()
     for xyz in m.xyzs
         write_xyz(filename, atoms, xyz', "a")
     end
+
+    m.xyzs[end]
+end
+
+function test_nh3()
+    atoms = split_atoms("NHHH")
+    basis = "cc-pvdz"
+    r = Float64[
+        0 0 0
+        1 0 0
+        0 1 0
+        0 0 1
+    ]
+
+    freq = 0.5
+    pol = [0, 1, 0]
+    pol = pol / norm(pol)
+    coup = 0.05
+
+    rf = make_runner_func("grad", freq, pol, coup, atoms, basis, 80)
+
+    egf = make_e_and_grad_func(rf)
+
+    qed_hf_engine = engine.qed_hf_engine(egf, atoms, r)
+
+    m = engine.run_opt(qed_hf_engine)
 
     m.xyzs[end]
 end
