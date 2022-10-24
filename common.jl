@@ -4,7 +4,8 @@ include("get_dipole.jl")
 const Å2B = 1.8897261245650618
 const kB = 3.166811563e-6
 
-function make_inp_func(freq, pol, coup, atoms, basis)
+function make_inp_func(freq, pol, coup, atoms, basis; restart=true)
+    restart_str = restart ? "\n    restart" : ""
     function make_inp(r)
         r /= Å2B
         r = reshape(r, 3, length(r) ÷ 3)
@@ -30,8 +31,7 @@ method
     qed-hf
 end method
 
-solver scf
-    restart
+solver scf$(restart_str)
     gradient threshold: 1d-10
 end solver scf
 
@@ -90,9 +90,9 @@ function delete_scratch(name)
 end
 
 function make_runner_func(name, freq, pol, coup, atoms, basis, omp;
-    eT="eT_qed_hf_grad_print")
+    eT="eT_qed_hf_grad_print", restart=true)
     delete_scratch(name)
-    inp_func = make_inp_func(freq, pol, coup, atoms, basis)
+    inp_func = make_inp_func(freq, pol, coup, atoms, basis, restart=restart)
     function runner_func(r)
         inp = inp_func(r)
         write_inp(inp, name)
