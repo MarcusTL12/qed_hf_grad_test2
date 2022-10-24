@@ -90,6 +90,31 @@ function test_h2o()
     m.xyzs[end]
 end
 
+function test_h2o_2()
+    atoms = split_atoms("OHH")
+    basis = "cc-pvdz"
+    r = [
+        0 0 0
+        0.7 0 0.7
+        0.7 0 -0.7
+    ]
+
+    freq = 0.5
+    pol = [0, 1, 0]
+    pol = pol / norm(pol)
+    coup = 0.05
+
+    rf = make_runner_func("grad", freq, pol, coup, atoms, basis, 4)
+
+    egf = make_e_and_grad_func(rf)
+
+    qed_hf_engine = engine.qed_hf_engine(egf, atoms, r)
+
+    m = engine.run_opt(qed_hf_engine)
+
+    m.xyzs[end]
+end
+
 function test_thalidomide()
     atoms = split_atoms("OOOOCCCCCCCCCCCCCNNHHHHHHHHHH")
     basis = "cc-pvdz"

@@ -2,12 +2,12 @@ using OhMyREPL
 using Plots
 using Rotations
 using LinearAlgebra
-plotly()
-
-plotly()
+using Plots.PlotMeasures
+# plotly()
 
 include("../common.jl")
 
+# plot_size = (400, 300)
 plot_size = (1200, 1000)
 
 const au2eV = 27.211396641308
@@ -64,13 +64,13 @@ function plot_nice_grid(xs, ys, zs, x_len, y_len)
     surface(xs2, ys2, zs2; xlabel="θ", ylabel="ϕ", size=(900, 700))
 end
 
-function make_surface(atoms, basis, r, coup, θs, ϕs)
+function make_surface(atoms, basis, r, coup, θs, ϕs, ntask, nomp)
     freq = 0.5
     pol = [0, 1, 0]
 
     rfs = [
-        make_runner_func("rot$i", freq, pol, coup, atoms, basis, 1; eT="eT_clean")
-        for i in 1:Threads.nthreads()
+        make_runner_func("rot$i", freq, pol, coup, atoms, basis, nomp; eT="eT_clean", restart=false)
+        for i in 1:ntask
     ]
 
     efs = make_tot_energy_function.(rfs)
@@ -96,19 +96,172 @@ function make_surface(atoms, basis, r, coup, θs, ϕs)
         end
     end
 
-    Threads.@threads for i in eachindex(es)
-        θ, ϕ = all_angles[i]
-        es[i] = efs[Threads.threadid()](rotate_geo(r, θ, ϕ))
-        Threads.atomic_add!(amt_done, 1)
+    tasks = [
+        begin
+            @async for i in th:ntask:length(es)
+                θ, ϕ = all_angles[i]
+                es[i] = efs[th](rotate_geo(r, θ, ϕ))
+                Threads.atomic_add!(amt_done, 1)
+            end
+        end for th in 1:ntask
+    ]
+
+    for t in tasks
+        wait(t)
     end
 
     wait(progressbar)
 
     e0 = lin_interp(θs, ϕs, es, 0.0, 0.0)
     es .-= e0
-    es .*= au2eV
+    es .*= au2eV * 1000
 
-    surface(ϕs, θs, es; xlabel="ϕ", ylabel="θ", size=plot_size)
+    surface(ϕs, θs, es; xlabel="ϕ", ylabel="θ", zlabel="meV", size=plot_size)
+end
+
+function make_surface_1d(atoms, basis, r, coup, θs, ntask, nomp, xorz=:x)
+    freq = 0.5
+    pol = [0, 1, 0]
+
+    rfs = [
+        make_runner_func("rot$i", freq, pol, coup, atoms, basis, nomp; eT="eT_clean", restart=false)
+        for i in 1:ntask
+    ]
+
+    efs = make_tot_energy_function.(rfs)
+
+    es = zeros(length(θs))
+
+    amt_done = Threads.Atomic{Int}(0)
+
+    progressbar = @async begin
+        a = 0
+        last_a = 0
+        b = length(es)
+        while a < b
+            a = amt_done[]
+            if a != last_a
+                p = round(a / b * 100; digits=2)
+                println("$a / $b = $p%")
+                last_a = a
+            end
+            sleep(1)
+        end
+    end
+
+    tasks = [
+        begin
+            @async for i in th:ntask:length(es)
+                if xorz == :x
+                    θ = θs[i]
+                    ϕ = 0
+                elseif xorz == :z
+                    θ = 0
+                    ϕ = θs[i]
+                end
+                es[i] = efs[th](rotate_geo(r, θ, ϕ))
+                Threads.atomic_add!(amt_done, 1)
+            end
+        end for th in 1:ntask
+    ]
+
+    for t in tasks
+        wait(t)
+    end
+
+    wait(progressbar)
+
+    e0 = minimum(es)
+    es .-= e0
+    es .*= au2eV * 1000
+
+    plot(θs, es; xlabel="θ", ylabel="meV", leg=false, size=plot_size)
+end
+
+function make_surface_1d_both(atoms, basis, r, coup, θs, ϕs, ntask, nomp)
+    freq = 0.5
+    pol = [0, 1, 0]
+
+    rfs = [
+        make_runner_func("rot$i", freq, pol, coup, atoms, basis, nomp; eT="eT_qed_hf_grad_print", restart=false)
+        for i in 1:ntask
+    ]
+
+    efs = make_tot_energy_function.(rfs)
+
+    esθ = zeros(length(θs))
+    esϕ = zeros(length(ϕs))
+
+    amt_done = Threads.Atomic{Int}(0)
+
+    progressbar = @async begin
+        a = 0
+        last_a = 0
+        b = length(esθ) + length(esϕ)
+        while a < b
+            a = amt_done[]
+            if a != last_a
+                p = round(a / b * 100; digits=2)
+                println("$a / $b = $p%")
+                last_a = a
+            end
+            sleep(1)
+        end
+    end
+
+    tasks = [
+        begin
+            @async for i in th:ntask:length(esθ)
+                θ = θs[i]
+                esθ[i] = efs[th](rotate_geo(r, θ, 0))
+                Threads.atomic_add!(amt_done, 1)
+            end
+        end for th in 1:ntask
+    ]
+
+    for t in tasks
+        wait(t)
+    end
+
+    tasks = [
+        begin
+            @async for i in th:ntask:length(esϕ)
+                ϕ = ϕs[i]
+                esϕ[i] = efs[th](rotate_geo(r, 0, ϕ))
+                Threads.atomic_add!(amt_done, 1)
+            end
+        end for th in 1:ntask
+    ]
+
+    for t in tasks
+        wait(t)
+    end
+
+    wait(progressbar)
+
+    e0 = min(minimum(esθ), minimum(esϕ))
+    esθ .-= e0
+    esθ .*= au2eV * 1000
+    esϕ .-= e0
+    esϕ .*= au2eV * 1000
+
+    plot(θs, esθ; xlabel="θ", ylabel="meV", label="x", size=plot_size, left_margin=30px)
+    plot!(ϕs, esϕ; label="z")
+end
+
+function test_h2_1d()
+    atoms = split_atoms("HH")
+    basis = "cc-pvdz"
+    r = [
+        0 0 0
+        1 0 0
+    ]'
+
+    coup = 0.05
+
+    θs = range(-90, 89; length=100)
+
+    make_surface_1d(atoms, basis, r, coup, θs, 40, 2, :z)
 end
 
 function test_h2()
@@ -124,24 +277,58 @@ function test_h2()
     θs = range(-90, 89; length=30)
     ϕs = range(0, 179; length=30)
 
-    make_surface(atoms, basis, r, coup, θs, ϕs)
+    make_surface(atoms, basis, r, coup, θs, ϕs, 40, 2)
 end
 
 function test_h2o()
     atoms = split_atoms("OHH")
     basis = "cc-pvdz"
     r = [
-        0.338169 -0.0474363 0.00728898
-        1.0885 0.527633 0.00346908
-        -0.41258 0.5271 0.00916178
-    ]'
+         0.0     0.0   0.0
+        -0.749   0.0   0.578
+         0.749  -0.0   0.578
+    ]' * Å2B
 
     coup = 0.05
 
-    θs = range(-90, 89; length=50)
-    ϕs = range(-90, 89; length=50)
+    θs = range(-90, 90; length=200)
+    ϕs = range(-90 + 45 - 3, 90 + 45 - 3; length=200)
 
-    make_surface(atoms, basis, r, coup, θs, ϕs)
+    make_surface(atoms, basis, r, coup, θs, ϕs, 80, 1)
+end
+
+function test_h2o_1d()
+    atoms = split_atoms("OHH")
+    basis = "cc-pvdz"
+    r = [
+        0.0     0.0   0.0
+        0.578   0.0   0.749
+        0.578  -0.0  -0.749
+    ]' * Å2B
+
+    coup = 0.05
+
+    θs = range(-90 + 45 - 8.2, 90 + 45 - 8.2; length=1000)
+    ϕs = range(-90 + 45 - 8.2, 90 + 45 - 8.2; length=1000)
+
+    make_surface_1d_both(atoms, basis, r, coup, θs, ϕs, 80, 1)
+end
+
+function test_h2o_test()
+    atoms = split_atoms("OHH")
+    basis = "cc-pvdz"
+    r = [
+        0 0 0
+        0.7 0 0.7
+        0.7 0 -0.7
+    ]' * Å2B
+
+    coup = 0.05
+
+    θs = range(-90, 89; length=100)
+    ϕs = range(-90, 89; length=100)
+
+    make_surface_1d_both(atoms, basis, r, coup, θs, ϕs, 80, 1)
 end
 
 function test_hof()
