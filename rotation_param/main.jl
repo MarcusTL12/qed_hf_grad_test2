@@ -49,7 +49,7 @@ function make_h2o_surface_1d()
     pol = [0, 1, 0]
     coup = 0.05
 
-    rm("tmp", recursive=true)
+    rm("tmp", recursive=true, force=true)
     mkpath("tmp")
     efs = [
         begin
