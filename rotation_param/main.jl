@@ -308,10 +308,10 @@ function test_h2o_1d()
 
     coup = 0.05
 
-    θs = range(-90 + 45 - 8.2, 90 + 45 - 8.2; length=1000)
-    ϕs = range(-90 + 45 - 8.2, 90 + 45 - 8.2; length=1000)
+    θs = range(-90 + 45 - 3, 90 + 45 - 3; length=1000)
+    ϕs = range(-90 + 45 - 3, 90 + 45 - 3; length=1000)
 
-    make_surface_1d_both(atoms, basis, r, coup, θs, ϕs, 80, 1)
+    make_surface_1d_both(atoms, basis, r, coup, θs, ϕs, 88, 1)
 end
 
 function test_h2o_test()
