@@ -1027,13 +1027,13 @@ function test_10h2o()
     freq = 0.5
     pol = [0, 1, 0]
     pol = pol / norm(pol)
-    coup = 0.1
+    coup = 0.05
 
-    rf = make_runner_func("grad", freq, pol, coup, atoms, basis, 40)
+    rf = make_runner_func("grad", freq, pol, coup, atoms, basis, 80)
 
     e_grad_func = make_e_and_grad_func(rf)
-    open("md/many_h2o/10h2o_0.1.xyz", "w") do io
-        do_md(io, 3, 25.0, atoms, e_grad_func, r)
+    open("md/many_h2o/10h2o_0.05.xyz", "w") do io
+        do_md(io, 3, 40.0, atoms, e_grad_func, r)
     end
 end
 
