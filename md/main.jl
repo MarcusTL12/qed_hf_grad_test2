@@ -1029,7 +1029,7 @@ function test_10h2o()
     pol = pol / norm(pol)
     coup = 0.05
 
-    rf = make_runner_func("grad", freq, pol, coup, atoms, basis, 80)
+    rf = make_runner_func("grad", freq, pol, coup, atoms, basis, 48)
 
     e_grad_func = make_e_and_grad_func(rf)
     open("md/many_h2o/10h2o_0.05.xyz", "w") do io
