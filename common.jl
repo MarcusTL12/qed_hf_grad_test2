@@ -1,5 +1,6 @@
 include("get_matrix.jl")
 include("get_dipole.jl")
+include("get_gradient.jl")
 
 const Å2B = 1.8897261245650618
 const kB = 3.166811563e-6
@@ -46,6 +47,7 @@ end qed
 
 hf mean value
    dipole
+   molecular gradient
 end hf mean value
 
 geometry
@@ -111,7 +113,7 @@ end
 function make_grad_func(runner_func)
     function grad_function(r)
         runner_func(r)
-        get_matrix("QEDHF Molecular Gradient", "$(eT_inout_dir)/$(runner_func.name)")
+        get_gradient("$(eT_inout_dir)/$(runner_func.name)")
     end
 end
 
@@ -120,7 +122,7 @@ function make_e_and_grad_func(runner_func)
         runner_func(r)
 
         get_tot_energy(runner_func.name),
-        get_matrix("QEDHF Molecular Gradient", "$(eT_inout_dir)/$(runner_func.name)")
+        get_gradient("$(eT_inout_dir)/$(runner_func.name)")
     end
 end
 
