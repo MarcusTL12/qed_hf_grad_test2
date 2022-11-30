@@ -9,7 +9,7 @@ filepath = sys.argv[3]
 
 remote_prefix = f"~/qed_hf_grad_test2/"
 
-command = "scp"
+command = "scp -r"
 
 dirname = os.path.dirname(filepath)
 
@@ -23,3 +23,4 @@ elif action == 'p': # push
 print(command)
 
 subprocess.run(command, shell=True)
+
