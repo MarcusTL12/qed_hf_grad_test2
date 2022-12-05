@@ -186,7 +186,7 @@ end
 
 function resume_md(filename, n_steps;
     Δt=nothing, freq=nothing, pol=nothing, coup=nothing, basis=nothing,
-    omp=nothing, v_scale=1.0)
+    omp=nothing, v_scale=1.0, name="grad")
     atoms, r, v, t, freq_l, pol_l, coup_l, basis_l, Δt_l = get_last_conf(filename)
 
     v *= v_scale
@@ -208,7 +208,7 @@ function resume_md(filename, n_steps;
     end
 
     pol /= norm(pol)
-    rf = make_runner_func("grad", freq, pol, coup, atoms, basis, omp)
+    rf = make_runner_func(name, freq, pol, coup, atoms, basis, omp)
 
     e_grad_func = make_e_and_grad_func(rf)
 
@@ -217,14 +217,14 @@ function resume_md(filename, n_steps;
     end
 end
 
-function keep_temp(filename, target_temp, sim_steps, avg_steps)
-    resume_md(filename, sim_steps)
+function keep_temp(filename, target_temp, sim_steps, avg_steps; name="grad")
+    resume_md(filename, sim_steps, name=name)
 
     avg = get_avg_last_T(filename, avg_steps)
 
     while !isfile("stop")
         println("Changing temp from $avg to $target_temp")
-        resume_md(filename, sim_steps; v_scale=clamp(√(target_temp / avg), 0.8, 1.2))
+        resume_md(filename, sim_steps; v_scale=clamp(√(target_temp / avg), 0.8, 1.2), name=name)
         avg = get_avg_last_T(filename, avg_steps)
     end
 end
@@ -795,8 +795,8 @@ function plot_mass_dev()
     xs = range(1000, 4000; length=1000)
 
     function add_plot!(ax)
-        data_c_ax = @view data_c[ax,:]
-        data_f_ax = @view data_f[ax,:]
+        data_c_ax = @view data_c[ax, :]
+        data_f_ax = @view data_f[ax, :]
 
         U_c = kde(data_c_ax)
         U_f = kde(data_f_ax)
@@ -834,8 +834,8 @@ function plot_mass_dev_history()
     yl = [0.0, 4.0]
 
     function add_plot!(ax)
-        data_c_ax = @view data_c[ax,:]
-        data_f_ax = @view data_f[ax,:]
+        data_c_ax = @view data_c[ax, :]
+        data_f_ax = @view data_f[ax, :]
 
         plot!(t_c, data_c_ax; label=labels[ax][1], subplot=ax, ylabel=string("xyz"[ax]),
             yguidefont=font(rgb[ax], :bold, rotation=-90.0, pointsize=20), ylims=yl)
@@ -1416,6 +1416,131 @@ function test_30h2o()
 
     e_grad_func = make_e_and_grad_func(rf)
     open("md/many_h2o/30h2o_0.1.xyz", "w") do io
+        do_md(io, 1, 40.0, atoms, e_grad_func, r)
+    end
+end
+
+function test_pna_30h2o()
+    atoms = split_atoms("C"^6 * "H"^4 * "NHHNOO" * "OHH"^30)
+    basis = "cc-pvdz"
+    r = Float64[
+        -4.76493 2.19929 -0.13922
+        -3.64625 1.36944 -0.07466
+        -2.46417 1.80738 0.52639
+        -2.44146 3.05770 1.14711
+        -3.55820 3.89501 1.10004
+        -4.72027 3.45908 0.45829
+        -5.66108 1.82955 -0.62452
+        -3.51049 4.86675 1.58168
+        -1.55536 3.38558 1.68549
+        -3.71026 0.36970 -0.49995
+        -1.39478 0.92863 0.67490
+        -0.48396 1.34876 0.85802
+        -1.37339 0.12491 0.04347
+        -5.91316 4.30914 0.45279
+        -6.81643 4.04440 -0.35565
+        -5.95725 5.24304 1.27321
+        -3.63753 4.98966 -2.46066
+        -2.78522 4.52479 -2.25598
+        -3.29779 5.88216 -2.64707
+        0.76240 4.64917 -0.34073
+        0.82445 3.90220 0.31593
+        1.55526 5.14874 -0.06654
+        1.27407 2.66487 1.31782
+        1.67801 1.88571 0.86664
+        1.27959 2.33565 2.24973
+        -2.35633 -0.56771 2.90388
+        -2.06319 -0.07144 2.10071
+        -1.90485 -1.42399 2.72001
+        -0.50195 -2.55736 2.08134
+        0.29052 -1.95841 2.13594
+        -0.16029 -3.32231 2.58020
+        -1.78944 0.99028 -2.73936
+        -2.74985 0.83462 -2.92080
+        -1.83496 1.90358 -2.37504
+        -4.36325 0.66251 -3.67824
+        -5.18187 0.29341 -3.25005
+        -4.68800 1.58841 -3.81559
+        -4.89082 3.28743 -4.09426
+        -5.78249 3.67363 -4.18591
+        -4.50891 3.91557 -3.42754
+        1.51682 -0.85033 2.14978
+        1.48473 -0.06597 2.74431
+        1.87052 -0.43842 1.32735
+        -1.20311 3.93888 -2.17178
+        -0.53263 4.17612 -1.48840
+        -0.60922 3.69783 -2.92140
+        -4.86560 4.93721 4.04586
+        -4.16255 5.63180 3.98195
+        -5.49071 5.27818 3.37341
+        -4.95759 0.38337 3.15468
+        -4.05680 -0.00399 3.03793
+        -4.71608 1.13259 3.74803
+        1.09891 1.42474 3.73670
+        1.46908 1.49633 4.63741
+        0.13255 1.48419 3.97322
+        -1.46851 1.47619 4.49103
+        -1.85393 0.65884 4.09253
+        -2.31031 1.96597 4.64986
+        -4.07409 2.48507 4.79027
+        -4.49369 2.58923 5.66542
+        -4.31852 3.36929 4.40728
+        0.24529 2.96667 -4.37690
+        -0.57599 3.17243 -4.89633
+        0.39192 2.06044 -4.74143
+        -2.87035 0.20024 -5.89186
+        -3.42502 0.20773 -5.07051
+        -3.42306 -0.35943 -6.46732
+        -2.27809 2.93180 -5.43612
+        -2.45357 2.03590 -5.80279
+        -3.17306 3.15206 -5.09641
+        0.16049 -0.75820 -2.02373
+        0.46718 -0.84956 -2.95251
+        -0.56482 -0.10121 -2.18145
+        -0.27933 0.27858 -4.86128
+        -0.89747 0.56468 -4.14672
+        -0.95475 0.05869 -5.54195
+        -8.24072 1.56335 -0.93256
+        -8.08460 1.27711 0.00298
+        -8.16215 2.53199 -0.81294
+        -7.32477 0.80109 1.51676
+        -6.55635 0.90466 2.12408
+        -7.35290 -0.18719 1.53405
+        -6.66655 -0.02691 -2.46303
+        -6.87324 -0.81023 -1.91943
+        -7.32881 0.60320 -2.07909
+        1.87638 0.50382 -0.27150
+        2.11281 1.13578 -1.00087
+        1.32818 -0.10984 -0.82168
+        1.91355 2.49288 -2.12397
+        1.68370 3.35376 -1.72455
+        1.53400 2.61077 -3.02427
+        -1.69372 -1.95707 -0.29688
+        -1.21427 -2.28335 0.50271
+        -0.94468 -1.84372 -0.92492
+        -1.34997 6.74588 1.26739
+        -0.87165 6.03840 0.79065
+        -1.44398 7.42465 0.57603
+        -2.85812 6.71416 3.58619
+        -2.32775 6.71486 2.75296
+        -2.30580 7.28287 4.14961
+        -6.36944 -1.69297 1.83657
+        -5.66646 -2.02605 1.22824
+        -5.81033 -1.22101 2.49212
+        -4.31935 -2.47549 0.20467
+        -3.41324 -2.12272 0.02876
+        -4.22835 -3.36101 -0.18716
+    ]' * Å2B
+
+    freq = 0.5
+    pol = [0, 1, 0]
+    # pol = pol / norm(pol)
+    coup = 0.1
+
+    rf = make_runner_func("pna10h2o", freq, pol, coup, atoms, basis, 12)
+
+    e_grad_func = make_e_and_grad_func(rf)
+    open("md/pna/pna_30h2o_0.1.xyz", "w") do io
         do_md(io, 1, 40.0, atoms, e_grad_func, r)
     end
 end

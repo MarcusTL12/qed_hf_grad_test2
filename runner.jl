@@ -10,4 +10,4 @@ include("md/main.jl")
 curfile = "md/many_h2o/10h2o_0.05.xyz"
 
 # @time resume_md(curfile, 10000)
-@time keep_temp(curfile, 275, 1000, 600)
+@time keep_temp(curfile, 275, 1000, 600; name="10h2o")

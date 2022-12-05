@@ -5,4 +5,5 @@ nohup.out
 tmp*
 __pycache__
 md/many_h2o/
+md/pna/
 eT_files
