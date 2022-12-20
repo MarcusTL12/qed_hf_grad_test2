@@ -18,7 +18,6 @@ function make_inp_func(freq, pol, coup, atoms, basis; restart=true)
             io,
             """
 system
-    name: Gradient
     charge: 0
 end system
 
