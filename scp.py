@@ -17,7 +17,7 @@ if action == 'f': # fetch
     remote_path = f"{cluster_name}:{remote_prefix}{filepath}"
     command = ' '.join([command, remote_path, dirname])
 elif action == 'p': # push
-    remote_path = f"{cluster_name}:{remote_prefix}{dirname}"
+    remote_path = f"{cluster_name}:{remote_prefix}{dirname}/"
     command = ' '.join([command, filepath, remote_path])
 
 print(command)
