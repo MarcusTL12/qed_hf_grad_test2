@@ -180,17 +180,21 @@ function write_inp(inp, name)
     end
 end
 
+function get_scratchdir()
+    "/scratch/marcusl/md/"
+end
+
 function run_inp(name, omp, eT)
     if isnothing(omp)
         omp = parse(Int, read("omp.txt", String))
     end
-    run(`$(homedir())/$(eT)/build/eT_launch.py $(eT_inout_dir)/$(name).inp --omp $(omp) --scratch scratch/md/$(name) -ks -s`)
+    run(`$(homedir())/$(eT)/build/eT_launch.py $(eT_inout_dir)/$(name).inp --omp $(omp) --scratch $(get_scratchdir())/$(name) -ks -s`)
     nothing
 end
 
 function delete_scratch(name)
-    if isdir("./scratch/$(name)")
-        rm("./scratch/$(name)"; recursive=true)
+    if isdir("$(get_scratchdir())/$(name)")
+        rm("$(get_scratchdir())/$(name)"; recursive=true)
     end
 end
 
