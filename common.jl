@@ -112,6 +112,68 @@ basis: $basis
     end
 end
 
+function make_inp_func_qed_ccsd(freq, pol, coup, atoms, basis; restart=true)
+    restart_str = restart ? "\n    restart" : ""
+    function make_inp(r)
+        r /= Å2B
+        r = reshape(r, 3, length(r) ÷ 3)
+        io = IOBuffer()
+
+        print(
+            io,
+            """
+- system
+    charge: 0
+
+- do
+    mean value
+
+- memory
+    available: 1920
+
+- method
+    qed-hf
+    qed-ccsd
+
+- solver scf$(restart_str)
+    energy threshold:            1.0d-10
+    gradient threshold:          1.0d-10
+    gradient response threshold: 1.0d-10
+
+- solver cc gs$(restart_str)
+    omega threshold:  1.0d-10
+    energy threshold: 1.0d-10
+
+- solver cholesky
+    threshold: 1.0d-12
+
+- solver cc multipliers$(restart_str)
+    threshold: 1.0d-11
+
+- boson
+    modes:        1
+    boson states: {1}
+    frequency:    {$freq}
+    polarization: {$(pol[1]), $(pol[2]), $(pol[3])}
+    coupling:     {$coup}
+
+- cc mean value
+    dipole
+    molecular gradient
+
+- geometry
+basis: $basis
+"""
+        )
+
+        for (i, a) in enumerate(atoms)
+            println(io, "    ", a, "    ", r[1, i], ' ', r[2, i], ' ', r[3, i])
+        end
+
+        String(take!(io))
+    end
+end
+
 function write_inp(inp, name)
     open("$(eT_inout_dir)/$(name).inp", "w") do io
         print(io, inp)
@@ -122,7 +184,7 @@ function run_inp(name, omp, eT)
     if isnothing(omp)
         omp = parse(Int, read("omp.txt", String))
     end
-    run(`$(homedir())/$(eT)/build/eT_launch.py $(eT_inout_dir)/$(name).inp --omp $(omp) --scratch ./scratch/$(name) -ks -s`)
+    run(`$(homedir())/$(eT)/build/eT_launch.py $(eT_inout_dir)/$(name).inp --omp $(omp) --scratch scratch/md/$(name) -ks -s`)
     nothing
 end
 
@@ -154,10 +216,26 @@ function make_runner_func(name, freq, pol, coup, atoms, basis, omp;
     end
 end
 
+function make_runner_func_qed_ccsd(name, freq, pol, coup, atoms, basis, omp;
+    eT="eT_qed_ccsd", restart=true)
+    delete_scratch(name)
+    inp_func = make_inp_func_qed_ccsd(freq, pol, coup, atoms, basis, restart=restart)
+    function runner_func(r)
+        inp = inp_func(r)
+        write_inp(inp, name)
+        run_inp(name, omp, eT)
+    end
+end
+
 const tot_energy_reg = r"Total energy:\ +(-?\d+\.\d+)"
+const ccsd_energy_reg = r"Final ground state energy \(a\.u\.\):\ +(-?\d+\.\d+)"
 
 function get_tot_energy(name)
-    m = match(tot_energy_reg, read("$(eT_inout_dir)/$(name).out", String))
+    s = read("$(eT_inout_dir)/$(name).out", String)
+    m = match(ccsd_energy_reg, s)
+    if isnothing(m)
+        m = match(tot_energy_reg, s)
+    end
     parse(Float64, m.captures[1])
 end
 
