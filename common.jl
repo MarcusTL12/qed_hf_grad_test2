@@ -7,7 +7,7 @@ const kB = 3.166811563e-6
 
 const eT_inout_dir = "eT_files"
 
-function make_inp_func(freq, pol, coup, atoms, basis; restart=true)
+function make_inp_func_old(freq, pol, coup, atoms, basis; restart=true)
     restart_str = restart ? "\n    restart" : ""
     function make_inp(r)
         r /= Å2B
@@ -64,6 +64,54 @@ basis: $basis
     end
 end
 
+function make_inp_func_qed_hf(freq, pol, coup, atoms, basis; restart=true)
+    restart_str = restart ? "\n    restart" : ""
+    function make_inp(r)
+        r /= Å2B
+        r = reshape(r, 3, length(r) ÷ 3)
+        io = IOBuffer()
+
+        print(
+            io,
+            """
+- system
+    charge: 0
+
+- do
+    ground state
+
+- memory
+    available: 1920
+
+- method
+    qed-hf
+
+- solver scf$(restart_str)
+    gradient threshold: 1d-10
+
+- boson
+    modes:        1
+    frequency:    {$freq}
+    polarization: {$(pol[1]), $(pol[2]), $(pol[3])}
+    coupling:     {$coup}
+
+- hf mean value
+   dipole
+   molecular gradient
+
+- geometry
+basis: $basis
+"""
+        )
+
+        for (i, a) in enumerate(atoms)
+            println(io, "    ", a, "    ", r[1, i], ' ', r[2, i], ' ', r[3, i])
+        end
+
+        String(take!(io))
+    end
+end
+
 function write_inp(inp, name)
     open("$(eT_inout_dir)/$(name).inp", "w") do io
         print(io, inp)
@@ -74,7 +122,7 @@ function run_inp(name, omp, eT)
     if isnothing(omp)
         omp = parse(Int, read("omp.txt", String))
     end
-    run(`$(homedir())/$(eT)/build/eT_launch.py $(eT_inout_dir)/$(name).inp --omp $(omp) --scratch ./scratch/$(name) -ks`)
+    run(`$(homedir())/$(eT)/build/eT_launch.py $(eT_inout_dir)/$(name).inp --omp $(omp) --scratch ./scratch/$(name) -ks -s`)
     nothing
 end
 
@@ -84,10 +132,21 @@ function delete_scratch(name)
     end
 end
 
-function make_runner_func(name, freq, pol, coup, atoms, basis, omp;
+function make_runner_func_old(name, freq, pol, coup, atoms, basis, omp;
     eT="eT_qed_hf_grad_print", restart=true)
     delete_scratch(name)
-    inp_func = make_inp_func(freq, pol, coup, atoms, basis, restart=restart)
+    inp_func = make_inp_func_old(freq, pol, coup, atoms, basis, restart=restart)
+    function runner_func(r)
+        inp = inp_func(r)
+        write_inp(inp, name)
+        run_inp(name, omp, eT)
+    end
+end
+
+function make_runner_func(name, freq, pol, coup, atoms, basis, omp;
+    eT="eT", restart=true)
+    delete_scratch(name)
+    inp_func = make_inp_func_qed_hf(freq, pol, coup, atoms, basis, restart=restart)
     function runner_func(r)
         inp = inp_func(r)
         write_inp(inp, name)

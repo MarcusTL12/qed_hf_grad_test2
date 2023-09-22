@@ -1,5 +1,5 @@
 
-const dip_reg = r"Dipole moment in \[Debye\].+?-+\n(.+?) +-{2}"s
+const dip_reg = r"Dipole moment \[Debye\].+?-+\n(.+?) +-{2}"s
 
 function get_dipole(name)
     m = match(dip_reg, read("eT_files/$name.out", String))
