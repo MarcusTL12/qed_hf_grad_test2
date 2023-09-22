@@ -229,6 +229,51 @@ function keep_temp(filename, target_temp, sim_steps, avg_steps; name="grad")
     end
 end
 
+function resume_md_qed_ccsd(filename, n_steps;
+    Δt=nothing, freq=nothing, pol=nothing, coup=nothing, basis=nothing,
+    omp=nothing, v_scale=1.0, name="grad")
+    atoms, r, v, t, freq_l, pol_l, coup_l, basis_l, Δt_l = get_last_conf(filename)
+
+    v *= v_scale
+
+    if isnothing(freq)
+        freq = freq_l
+    end
+    if isnothing(pol)
+        pol = pol_l
+    end
+    if isnothing(coup)
+        coup = coup_l
+    end
+    if isnothing(basis)
+        basis = basis_l
+    end
+    if isnothing(Δt)
+        Δt = Δt_l
+    end
+
+    pol /= norm(pol)
+    rf = make_runner_func_qed_ccsd(name, freq, pol, coup, atoms, basis, omp)
+
+    e_grad_func = make_e_and_grad_func(rf)
+
+    open(filename, "a") do io
+        do_md(io, n_steps, Δt, atoms, e_grad_func, r, v; add_first=false, t0=t)
+    end
+end
+
+function keep_temp_qed_ccsd(filename, target_temp, sim_steps, avg_steps; name="grad")
+    resume_md_qed_ccsd(filename, sim_steps, name=name)
+
+    avg = get_avg_last_T(filename, avg_steps)
+
+    while !isfile("stop")
+        println("Changing temp from $avg to $target_temp")
+        resume_md_qed_ccsd(filename, sim_steps; v_scale=clamp(√(target_temp / avg), 0.8, 1.2), name=name)
+        avg = get_avg_last_T(filename, avg_steps)
+    end
+end
+
 ############ ANALYSIS ########
 
 function get_t(filename)

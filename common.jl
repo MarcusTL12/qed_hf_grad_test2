@@ -136,19 +136,19 @@ function make_inp_func_qed_ccsd(freq, pol, coup, atoms, basis; restart=true)
     qed-ccsd
 
 - solver scf$(restart_str)
-    energy threshold:            1.0d-10
-    gradient threshold:          1.0d-10
-    gradient response threshold: 1.0d-10
+    energy threshold:            1.0d-9
+    gradient threshold:          1.0d-9
+    gradient response threshold: 1.0d-9
 
 - solver cc gs$(restart_str)
-    omega threshold:  1.0d-10
-    energy threshold: 1.0d-10
+    omega threshold:  1.0d-9
+    energy threshold: 1.0d-9
 
 - solver cholesky
-    threshold: 1.0d-12
+    threshold: 1.0d-9
 
 - solver cc multipliers$(restart_str)
-    threshold: 1.0d-11
+    threshold: 1.0d-9
 
 - boson
     modes:        1

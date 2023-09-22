@@ -38,17 +38,17 @@ function test_4h2_qed_ccsd()
         -2.87484 -1.07894 0.74657
     ]' * Å2B
 
-    freq = 0.5
+    freq = 0.46
     pol = [0.0, 1.0, 0.0]
     pol = pol / norm(pol)
     coup = 0.1
 
     rf = make_runner_func_qed_ccsd("qedccsd_grad",
-        freq, pol, coup, atoms, basis, 48, eT="eT_dev")
+        freq, pol, coup, atoms, basis, 40)
 
     e_grad_func = make_e_and_grad_func(rf)
 
-    open("md/qed_ccsd/h2/4H2_$(coup)_$basis.xyz", "w") do io
-        do_md(io, 100, 25.0, atoms, e_grad_func, r)
+    open("md/qed_ccsd/h2/4H2_$(freq)_$(coup)_$basis.xyz", "w") do io
+        do_md(io, 2, 25.0, atoms, e_grad_func, r)
     end
 end
