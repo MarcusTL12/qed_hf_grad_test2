@@ -6,6 +6,7 @@ using Statistics
 using KernelDensity
 using QuadGK
 using Plots.PlotMeasures
+using StatsPlots
 
 include("../common.jl")
 
@@ -723,7 +724,22 @@ function calculate_dev_from_pol_h2o(r, pol)
     devs
 end
 
-function get_last_n_dev_from_pol(filename, pol, n, spacing=1)
+function calculate_dev_from_pol_h2(r, pol)
+    devs = Float64[]
+
+    for i in 1:2:size(r, 2)
+        @views h2vec = r[:, i+1] - r[:, i]
+
+        h2vec /= norm(h2vec)
+
+        push!(devs, abs(h2vec ⋅ pol))
+    end
+
+    devs
+end
+
+function get_last_n_dev_from_pol(filename, pol, n, spacing=1;
+    dev_func=calculate_dev_from_pol_h2o)
     r, _, atoms = get_rv(filename)
 
     devs = Float64[]
@@ -732,7 +748,7 @@ function get_last_n_dev_from_pol(filename, pol, n, spacing=1)
     rng = rng[end-(spacing*n-1):spacing:end]
 
     for i in rng
-        append!(devs, calculate_dev_from_pol_h2o((@view r[:, :, i]), pol))
+        append!(devs, dev_func((@view r[:, :, i]), pol))
     end
 
     devs
@@ -777,6 +793,65 @@ function plot_µ_hist(filename)
     plot!(@view µs[2, :]; label="y")
     plot!(@view µs[3, :]; label="z")
 end
+
+############ PLOT TESTING H2 ##################
+
+function plot_pol_dev_density_4H2()
+    plot()
+    for coup in [0.0, 0.01, 0.05, 0.1]
+        density!(get_last_n_dev_from_pol(
+            "md/qed_ccsd/h2/4H2_0.46_$(coup)_aug-cc-pvdz.xyz",
+            [0.0, 1.0, 0.0], 1000, 10; dev_func=calculate_dev_from_pol_h2);
+            label="$coup")
+    end
+    plot!()
+end
+
+function plot_pol_dev_density_2H2()
+    plot()
+    for coup in [0.01, 0.05, 0.1]
+        density!(get_last_n_dev_from_pol(
+            "md/qed_ccsd/h2/2H2_0.46_$(coup)_aug-cc-pvdz.xyz",
+            [0.0, 1.0, 0.0], 10000, 7; dev_func=calculate_dev_from_pol_h2);
+            label="$coup")
+    end
+    plot!()
+end
+
+function plot_mass_dev_history_h2()
+    plot(; layout=(3, 1), link=:x, size=(1000, 600), leg=:topright,
+        left_margin=50px, bottom_margin=30px)
+    plot!(; subplot=3, xlabel="t [ps]")
+
+    data_c = get_std_dev_mass("md/qed_ccsd/h2/4H2_0.46_0.1_aug-cc-pvdz.xyz")
+    t_c = get_t("md/qed_ccsd/h2/4H2_0.46_0.1_aug-cc-pvdz.xyz") * au2ps
+    data_f = get_std_dev_mass("md/qed_ccsd/h2/4H2_0.46_0.0_aug-cc-pvdz.xyz")
+    t_f = get_t("md/qed_ccsd/h2/4H2_0.46_0.0_aug-cc-pvdz.xyz") * au2ps
+
+    rgb = (:red, :green, :blue)
+
+    labels = [
+        ("0.1", "0.0"),
+        (nothing, nothing),
+        (nothing, nothing)
+    ]
+
+    yl = [0.0, 4.0]
+
+    function add_plot!(ax)
+        data_c_ax = @view data_c[ax, :]
+        data_f_ax = @view data_f[ax, :]
+
+        plot!(t_c, data_c_ax; label=labels[ax][1], subplot=ax, ylabel=string("xyz"[ax]),
+            yguidefont=font(rgb[ax], :bold, rotation=-90.0, pointsize=20), ylims=yl)
+        plot!(t_f, data_f_ax; label=labels[ax][2], subplot=ax)
+    end
+
+    add_plot!(1)
+    add_plot!(2)
+    add_plot!(3)
+end
+
 
 ############ NICE PRESENTABLE PLOTS ##################
 
