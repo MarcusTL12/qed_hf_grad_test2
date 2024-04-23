@@ -136,19 +136,19 @@ function make_inp_func_qed_ccsd(freq, pol, coup, atoms, basis; restart=true)
     qed-ccsd
 
 - solver scf$(restart_str)
-    energy threshold:            1.0d-9
-    gradient threshold:          1.0d-9
-    gradient response threshold: 1.0d-9
+    energy threshold:            1.0d-6
+    gradient threshold:          1.0d-6
+    gradient response threshold: 1.0d-6
 
 - solver cc gs$(restart_str)
-    omega threshold:  1.0d-9
-    energy threshold: 1.0d-9
+    omega threshold:  1.0d-6
+    energy threshold: 1.0d-6
 
 - solver cholesky
-    threshold: 1.0d-9
+    threshold: 1.0d-6
 
 - solver cc multipliers$(restart_str)
-    threshold: 1.0d-9
+    threshold: 1.0d-6
 
 - boson
     modes:        1
@@ -221,7 +221,7 @@ function make_runner_func(name, freq, pol, coup, atoms, basis, omp;
 end
 
 function make_runner_func_qed_ccsd(name, freq, pol, coup, atoms, basis, omp;
-    eT="eT_qed_ccsd", restart=true)
+    eT="eT_dev", restart=true)
     delete_scratch(name)
     inp_func = make_inp_func_qed_ccsd(freq, pol, coup, atoms, basis, restart=restart)
     function runner_func(r)
@@ -278,6 +278,15 @@ function write_xyz(filename, atoms, r, mode="w")
         for (i, a) in enumerate(atoms)
             println(io, "$a    $(r[1, i]) $(r[2, i]) $(r[3, i])")
         end
+    end
+end
+
+function write_xyz_hist(filename, atoms, rs)
+    isfirst = true
+    for r in rs
+        mode = isfirst ? "w" : "a"
+        isfirst = false
+        write_xyz(filename, atoms, r', mode)
     end
 end
 

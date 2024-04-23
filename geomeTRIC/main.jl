@@ -223,3 +223,31 @@ function test_nh3()
 
     m.xyzs[end]
 end
+
+function test_2h2o_qed_ccsd()
+    atoms = split_atoms("OHHOHH")
+    basis = "sto-3G"
+    r = Float64[
+        0.224814 0.265419 -0.0118646
+        0.118539 0.0837589 0.914633
+        -0.605434 0.0282651 -0.397106
+        -0.0365481 -0.370659 2.89984
+        0.796774 -0.398863 3.34876
+        -0.65382 -0.0447871 3.53878
+    ] .+ rand(6, 3) .* 0.001
+
+    freq = 0.5
+    pol = [0.577350, 0.577350, 0.577350]
+    pol = pol / norm(pol)
+    coup = 0.05
+
+    rf = make_runner_func_qed_ccsd("grad", freq, pol, coup, atoms, basis, 48)
+
+    egf = make_e_and_grad_func(rf)
+
+    qed_hf_engine = engine.qed_hf_engine(egf, atoms, r)
+
+    m = engine.run_opt(qed_hf_engine)
+
+    write_xyz_hist("2H2O_qed_ccsd.xyz", atoms, m.xyzs)
+end

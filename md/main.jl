@@ -807,6 +807,17 @@ function plot_pol_dev_density_4H2()
     plot!()
 end
 
+function plot_pol_dev_density_4H2_angle()
+    plot()
+    for coup in [0.0, 0.01, 0.05, 0.1]
+        density!(rad2deg.(asin.(get_last_n_dev_from_pol(
+            "md/qed_ccsd/h2/4H2_0.46_$(coup)_aug-cc-pvdz.xyz",
+            [0.0, 1.0, 0.0], 1000, 10; dev_func=calculate_dev_from_pol_h2)));
+            label="$coup")
+    end
+    plot!()
+end
+
 function plot_pol_dev_density_2H2()
     plot()
     for coup in [0.01, 0.05, 0.1]
@@ -904,15 +915,16 @@ function plot_plan_dev()
 end
 
 function plot_mass_dev()
-    plot(; layout=(3, 1), size=(500, 500), leg=:topleft)
+    plot(; link=:x, layout=(3, 1), size=(500, 500), leg=:topleft)
+    plot!(; subplot=3, xlabel="[Å]")
 
     spacing = 1
-    n = 4000 ÷ spacing
+    n = 10000 ÷ spacing
 
     data_c = get_last_n_std_dev_mass("md/many_h2o/30h2o_0.1.xyz", n, spacing)
     data_f = get_last_n_std_dev_mass("md/many_h2o/30h2o_free.xyz", n, spacing)
 
-    xs = range(1000, 4000; length=1000)
+    xs = range(0, 4; length=1000)
 
     function add_plot!(ax)
         data_c_ax = @view data_c[ax, :]
@@ -926,6 +938,46 @@ function plot_mass_dev()
 
         plot!(xs, f_c; label="0.1", subplot=ax, ylabel=string("xyz"[ax]))
         plot!(xs, f_f; label="0.0", subplot=ax)
+    end
+
+    add_plot!(1)
+    add_plot!(2)
+    add_plot!(3)
+end
+
+function plot_mass_dev_history_new()
+    plot(; layout=(3, 1), link=:x, size=(500, 500), leg=:bottomright)
+    plot!(; subplot=3, xlabel="t [ps]")
+
+    data_c = get_std_dev_mass("md/many_h2o/30h2o_0.1.xyz")
+    t_c = get_t("md/many_h2o/30h2o_0.1.xyz") * au2ps
+    data_f = get_std_dev_mass("md/many_h2o/30h2o_free.xyz")
+    t_f = get_t("md/many_h2o/30h2o_free.xyz") * au2ps
+
+    n_min = min(length(t_c), length(t_f))
+
+    t_c = t_c[1:n_min]
+    t_f = t_f[1:n_min]
+
+    data_c = data_c[:, 1:n_min]
+    data_f = data_f[:, 1:n_min]
+
+    rgb = (:red, :green, :blue)
+
+    labels = [
+        ("0.1", "0.0"),
+        (nothing, nothing),
+        (nothing, nothing)
+    ]
+
+    yl = [0.0, 4.0]
+
+    function add_plot!(ax)
+        data_c_ax = @view data_c[ax, :]
+        data_f_ax = @view data_f[ax, :]
+
+        plot!(t_c, data_c_ax; label="0.1", subplot=ax, ylabel=string("xyz"[ax]) * " [Å]", ylims=yl)
+        plot!(t_f, data_f_ax; label="0.0", subplot=ax)
     end
 
     add_plot!(1)
