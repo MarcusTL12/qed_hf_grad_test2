@@ -129,26 +129,26 @@ function make_inp_func_qed_ccsd(freq, pol, coup, atoms, basis; restart=true)
     mean value
 
 - memory
-    available: 1920
+    available: 240
 
 - method
     qed-hf
     qed-ccsd
 
 - solver scf$(restart_str)
-    energy threshold:            1.0d-6
-    gradient threshold:          1.0d-6
-    gradient response threshold: 1.0d-6
+    energy threshold:            1.0d-10
+    gradient threshold:          1.0d-10
+    gradient response threshold: 1.0d-10
 
 - solver cc gs$(restart_str)
-    omega threshold:  1.0d-6
-    energy threshold: 1.0d-6
+    omega threshold:  1.0d-10
+    energy threshold: 1.0d-10
 
 - solver cholesky
-    threshold: 1.0d-6
+    threshold: 1.0d-10
 
 - solver cc multipliers$(restart_str)
-    threshold: 1.0d-6
+    threshold: 1.0d-10
 
 - boson
     modes:        1
@@ -181,7 +181,7 @@ function write_inp(inp, name)
 end
 
 function get_scratchdir()
-    "/scratch/marcusl/md/"
+    "/scratch/marcusl/eT_SCRATCH/"
 end
 
 function run_inp(name, omp, eT)
@@ -221,7 +221,7 @@ function make_runner_func(name, freq, pol, coup, atoms, basis, omp;
 end
 
 function make_runner_func_qed_ccsd(name, freq, pol, coup, atoms, basis, omp;
-    eT="eT_dev", restart=true)
+    eT="eT", restart=true)
     delete_scratch(name)
     inp_func = make_inp_func_qed_ccsd(freq, pol, coup, atoms, basis, restart=restart)
     function runner_func(r)
