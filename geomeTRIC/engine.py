@@ -17,10 +17,10 @@ class qed_hf_engine(geometric.engine.Engine):
         return {'energy': e, 'gradient': g.T.ravel()}
 
 
-def run_opt(eng, conv_params=None):
+def run_opt(eng, **kwargs):
     tmpf = tempfile.mktemp()
     print(eng.egf)
     return geometric.optimize.run_optimizer(
         customengine=eng, check=1, input=tmpf, logIni='./log.ini', constraints="./constraints.txt",
-        **conv_params,
+        **kwargs,
     )

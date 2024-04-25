@@ -174,6 +174,67 @@ basis: $basis
     end
 end
 
+function make_inp_func_qed_ccsd_mol(freq, pol, coup; restart=true)
+    restart_str = restart ? "\n    restart" : ""
+    function make_inp(mol)
+        buf = IOBuffer()
+
+        for i in 1:mol.natm
+            atom = mol.atom_symbol(i - 1)
+            coords = mol.atom_coord(i - 1) / 1.8897261245650618
+
+            println(buf, atom, "    ", coords[1], " ", coords[2], " ", coords[3])
+        end
+
+        geom = String(take!(buf)[1:end-1])
+
+        """
+- system
+    charge: 0
+
+- do
+    mean value
+
+- memory
+    available: 240
+
+- method
+    qed-hf
+    qed-ccsd
+
+- solver scf$(restart_str)
+    energy threshold:            1.0d-10
+    gradient threshold:          1.0d-10
+    gradient response threshold: 1.0d-10
+
+- solver cc gs$(restart_str)
+    omega threshold:  1.0d-10
+    energy threshold: 1.0d-10
+
+- solver cholesky
+    threshold: 1.0d-10
+
+- solver cc multipliers$(restart_str)
+    threshold: 1.0d-10
+
+- boson
+    modes:        1
+    boson states: {1}
+    frequency:    {$freq}
+    polarization: {$(pol[1]), $(pol[2]), $(pol[3])}
+    coupling:     {$coup}
+
+- cc mean value
+    dipole
+    molecular gradient
+
+- geometry
+basis: $(mol.basis)
+$geom
+"""
+    end
+end
+
 function write_inp(inp, name)
     open("$(eT_inout_dir)/$(name).inp", "w") do io
         print(io, inp)
@@ -221,9 +282,20 @@ function make_runner_func(name, freq, pol, coup, atoms, basis, omp;
 end
 
 function make_runner_func_qed_ccsd(name, freq, pol, coup, atoms, basis, omp;
-    eT="eT", restart=true)
+    eT="eT_dev", restart=true)
     delete_scratch(name)
     inp_func = make_inp_func_qed_ccsd(freq, pol, coup, atoms, basis, restart=restart)
+    function runner_func(r)
+        inp = inp_func(r)
+        write_inp(inp, name)
+        run_inp(name, omp, eT)
+    end
+end
+
+function make_runner_func_qed_ccsd_mol(name, freq, pol, coup, omp;
+    eT="eT_dev", restart=true)
+    delete_scratch(name)
+    inp_func = make_inp_func_qed_ccsd_mol(freq, pol, coup, restart=restart)
     function runner_func(r)
         inp = inp_func(r)
         write_inp(inp, name)

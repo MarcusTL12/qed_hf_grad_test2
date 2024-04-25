@@ -226,7 +226,7 @@ end
 
 function test_2h2o_qed_ccsd()
     atoms = split_atoms("OHHOHH")
-    basis = "sto-3G"
+    basis = "cc-pVDZ"
     r = Float64[
         0.224814 0.265419 -0.0118646
         0.118539 0.0837589 0.914633
@@ -234,7 +234,7 @@ function test_2h2o_qed_ccsd()
         -0.0365481 -0.370659 2.89984
         0.796774 -0.398863 3.34876
         -0.65382 -0.0447871 3.53878
-    ] .+ rand(6, 3) .* 0.001
+    ]
 
     freq = 0.5
     pol = [0.577350, 0.577350, 0.577350]
@@ -247,7 +247,9 @@ function test_2h2o_qed_ccsd()
 
     qed_hf_engine = engine.qed_hf_engine(egf, atoms, r)
 
-    m = engine.run_opt(qed_hf_engine)
+    m = engine.run_opt(qed_hf_engine, convergence_gmax=1e-7)
 
     write_xyz_hist("2H2O_qed_ccsd.xyz", atoms, m.xyzs)
+
+    m
 end
