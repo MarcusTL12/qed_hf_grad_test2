@@ -122,33 +122,28 @@ function make_inp_func_qed_ccsd(freq, pol, coup, atoms, basis; restart=true)
         print(
             io,
             """
-- system
-    charge: 0
-
 - do
     mean value
-
-- memory
-    available: 240
 
 - method
     qed-hf
     qed-ccsd
 
+- cc mean value
+    dipole
+    molecular gradient
+
+- memory
+    available: 1600
+
 - solver scf$(restart_str)
-    energy threshold:            1.0d-10
-    gradient threshold:          1.0d-10
-    gradient response threshold: 1.0d-10
+    algorithm: scf-diis
 
 - solver cc gs$(restart_str)
-    omega threshold:  1.0d-10
-    energy threshold: 1.0d-10
-
-- solver cholesky
-    threshold: 1.0d-10
+    storage: memory
 
 - solver cc multipliers$(restart_str)
-    threshold: 1.0d-10
+    storage: memory
 
 - boson
     modes:        1
@@ -156,10 +151,6 @@ function make_inp_func_qed_ccsd(freq, pol, coup, atoms, basis; restart=true)
     frequency:    {$freq}
     polarization: {$(pol[1]), $(pol[2]), $(pol[3])}
     coupling:     {$coup}
-
-- cc mean value
-    dipole
-    molecular gradient
 
 - geometry
 basis: $basis
@@ -249,7 +240,7 @@ function run_inp(name, omp, eT)
     if isnothing(omp)
         omp = parse(Int, read("omp.txt", String))
     end
-    run(`$(homedir())/$(eT)/build/eT_launch.py $(eT_inout_dir)/$(name).inp --omp $(omp) --scratch $(get_scratchdir())/$(name) -ks -s`)
+    run(`$(homedir())/$(eT)/build/eT_launch.py $(eT_inout_dir)/$(name).inp --omp $(omp) --scratch $(get_scratchdir())/$(name) -ks`)
     nothing
 end
 
@@ -282,7 +273,7 @@ function make_runner_func(name, freq, pol, coup, atoms, basis, omp;
 end
 
 function make_runner_func_qed_ccsd(name, freq, pol, coup, atoms, basis, omp;
-    eT="eT_dev", restart=true)
+    eT="eT", restart=true)
     delete_scratch(name)
     inp_func = make_inp_func_qed_ccsd(freq, pol, coup, atoms, basis, restart=restart)
     function runner_func(r)

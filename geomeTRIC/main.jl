@@ -2,7 +2,7 @@ using PyCall
 using OhMyREPL
 using LinearAlgebra
 
-pushfirst!(pyimport("sys")."path", "./geomeTRIC")
+pushfirst!(pyimport("sys")."path", "/home/marcusl/qed_hf_grad_test2/geomeTRIC/")
 
 engine = pyimport("engine")
 
